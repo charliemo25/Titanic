@@ -1,0 +1,13 @@
+{
+    "name": "curze/challenge",
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "authors": [{
+        "name": "Moreau Charlie",
+        "email": "moreaucharlie25@gmail.com"
+    }],
+    "require": {}
+}
