@@ -2,21 +2,35 @@
 
 namespace App\Model;
 
-class Passenger
+use SplObserver;
+use SplSubject;
+
+class Passenger implements SplSubject
 {
     public function __construct(
-        private int $id,
-        private bool $survived,
-        private int $class,
-        private string $name,
-        private string $sex,
-        private ?int $age = null,
-        private int $sibSp,
-        private int $parch,
-        private string $ticket,
-        private float $fare,
-        private ?string $cabin = null,
-        private ?string $embarked = null
+        public int $id,
+        public string $name,
+        public bool $survived,
+        public int $class,
+        public string $sex,
+        public array $observers = []
     ) {
+    }
+
+    public function attach(SplObserver $observer): void
+    {
+        $this->observers[get_class($observer)] = $observer;
+    }
+
+    public function detach(SplObserver $observer): void
+    {
+        unset($this->observers[get_class($observer)]);
+    }
+
+    public function notify(): void
+    {
+        foreach ($this->observers as $key => $observer) {
+            $observer->update($this);
+        }
     }
 }

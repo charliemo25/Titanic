@@ -1,34 +1,72 @@
 <?php
 
-use App\ReadIterator;
+use App\Chance;
+use App\DataService;
+use App\Log;
+use App\Model\Passenger;
 
 require "vendor/autoload.php";
 
-$iterator = new ReadIterator;
-$fileName = __DIR__ . "/Data/titanic.csv";
+$generator = function (string $fileName) {
+    $f = fopen($fileName, 'r');
+    $count = 0;
+    while (!feof($f)) {
+        $line = fgetcsv($f);
+        $count++;
+        if (is_array($line) && $count > 1) {
+            yield $line;
+        }
+    }
+    fclose($f);
+};
 
-$iterator->getSurvivors($fileName);
+$counters = [
+    "total" => 0,
 
-echo  "total: " . $iterator->persons . "\n";
+    "male" => [
+        "total" => 0,
+        "survived" => 0,
+        "class_1" => 0,
+        "class_2" => 0,
+        "class_3" => 0,
+    ],
+    "female" => [
+        "total" => 0,
+        "survived" => 0,
+        "class_1" => 0,
+        "class_2" => 0,
+        "class_3" => 0,
+    ],
+];
 
-echo  "survivant: " . $iterator->survivors . "\n";
+foreach ($generator($fileName = __DIR__ . "/Data/titanic.csv") as $survivor) {
+    $counters["total"]++;
+    $sex = $survivor[4];
+    $counters[$sex]["total"]++;
 
-echo "proportion de survivant: " . round(100 * $iterator->survivors / $iterator->persons, 2) . "% \n";
+    if ($survivor[1]) {
+        $class = $survivor[2];
+        $counters[$sex]["survived"]++;
+        $counters[$sex]["class_$class"]++;
+    }
+}
 
-echo "_ _ _ _ _ _ \n\n";
+$dataService = new DataService();
+$dataService->getSurvivorsStats($counters);
 
-$iterator->getSurvivorsSex($fileName);
+// Observers
+$log = new Log($dataService->data);
+$chance = new Chance($dataService->data);
 
-echo "total d'hommes: " . $iterator->male["total"] . "\n";
+foreach ($generator($fileName = __DIR__ . "/Data/titanic.csv") as $survivor) {
 
-echo "total d'hommes survivant': " . $iterator->male["survivors"] . "\n";
+    // Passenger
+    $passenger = new Passenger($survivor[0], $survivor[3], $survivor[1], $survivor[2], $survivor[4]);
 
-echo "proportion d'hommes survivant': " . round(100 * $iterator->male["survivors"] / $iterator->male["total"], 2) . "% \n\n";
+    $passenger->attach($log);
+    $passenger->attach($chance);
+    $passenger->notify();
+}
 
-// Femmes
 
-echo "total de femmes: " . $iterator->female["total"] . "\n";
-
-echo "total de femmes survivantes: " . $iterator->female["survivors"] . "\n";
-
-echo "proportion de femmes survivantes: " . round(100 * $iterator->female["survivors"] / $iterator->female["total"], 2) . "% \n";
+// print_r(DataService::getSurvivorsStats($counters));
